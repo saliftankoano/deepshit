@@ -3,74 +3,26 @@ import { DeepSeekService } from "../services/deepseek";
 import { config } from "../utils/config";
 import { logger } from "../utils/logger";
 import { z } from "zod";
-import {
-  CodeCriticInput,
-  CodeCriticInputSchema,
-  ValidationError,
-} from "../types";
 
-// Helper functions for validation and formatting
-function validateInput(params: any): CodeCriticInput {
-  try {
-    return CodeCriticInputSchema.parse(params);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      throw new ValidationError(
-        `Invalid input: ${error.errors.map((e) => e.message).join(", ")}`
-      );
-    }
-    throw new ValidationError("Invalid input format");
-  }
+interface CritiqueToolParams {
+  code: string;
+  language: string;
+  framework?: string;
+  userGoal?: string;
 }
 
-function formatResponse(result: any): string {
-  // Format the analysis result into a readable string
-  return `Code Analysis Results:
-Overall Score: ${result.overall_score}/10
-
-Critical Issues:
-${result.critical_issues
-  .map(
-    (issue: any) =>
-      `- [${issue.severity.toUpperCase()}] ${issue.description}\n  Line ${
-        issue.line_range[0]
-      }-${issue.line_range[1]}: ${issue.explanation}\n  Fix: ${
-        issue.fix_suggestion
-      }`
-  )
-  .join("\n")}
-
-Suggestions:
-${result.suggestions
-  .map(
-    (suggestion: any) =>
-      `- ${suggestion.description}\n  Impact: ${suggestion.impact}`
-  )
-  .join("\n")}
-
-Alternative Implementations:
-${result.alternatives
-  .map(
-    (alt: any) =>
-      `- ${alt.description}\n  Example:\n  ${
-        alt.code_example
-      }\n  Benefits: ${alt.benefits.join(
-        ", "
-      )}\n  Trade-offs: ${alt.trade_offs.join(", ")}`
-  )
-  .join("\n")}
-
-Context Alignment:
-Score: ${result.context_alignment.alignment_score}/10
-Analysis: ${result.context_alignment.goal_analysis}
-Recommendations:
-${result.context_alignment.recommendations
-  .map((rec: string) => `- ${rec}`)
-  .join("\n")}`;
+interface RelatedFile {
+  path: string;
+  content: string;
+  relevance: string;
 }
 
-// Tool registration function that will be used by the MCP server
-export function registerCritiqueCodeTool(server: McpServer) {
+interface ChatHistoryEntry {
+  message: string;
+  timestamp?: string;
+}
+
+export function registerCritiqueCodeTool(server: McpServer): void {
   const deepSeekService = new DeepSeekService(
     config.togetherApiKey,
     config.togetherApiUrl,
@@ -78,92 +30,75 @@ export function registerCritiqueCodeTool(server: McpServer) {
     config.analysisTimeout
   );
 
-  server.registerTool(
-    "critique_code",
+  server.tool(
+    "critique-code",
     {
-      title: "Code Critic",
-      description:
-        "Analyze generated code for security vulnerabilities, quality issues, and best practice violations",
-      inputSchema: {
-        code: z.string().min(1).describe("The code to analyze"),
-        context: z
-          .object({
-            userGoal: z
-              .string()
-              .min(1)
-              .describe("What the user is trying to achieve with this code"),
-            relatedFiles: z
-              .array(
-                z.object({
-                  path: z.string(),
-                  content: z.string(),
-                  relevance: z.string(),
-                })
-              )
-              .default([])
-              .describe("Related files that provide context"),
-            language: z
-              .enum(["typescript", "javascript"])
-              .describe("Programming language of the code"),
-            framework: z
-              .string()
-              .optional()
-              .describe("Framework being used (optional)"),
-          })
-          .required({
-            userGoal: true,
-            language: true,
-          }),
-        chatHistory: z
-          .array(
-            z.object({
-              message: z.string(),
-              timestamp: z.string(),
-            })
-          )
-          .default([])
-          .describe("Previous conversation history for context"),
-      },
+      code: z.string().min(1),
+      language: z.string().min(1),
+      framework: z.string().optional(),
+      userGoal: z.string().optional(),
     },
-    async (params: any) => {
-      const startTime = Date.now();
-
+    {
+      title: "Code Critique",
+      description: "Analyze code for issues and suggest improvements",
+    },
+    async (params: CritiqueToolParams) => {
       try {
-        // Validate input
-        const validatedInput = validateInput(params);
-
-        // Log the analysis request
-        logger.info("Code criticism requested", {
-          codeLength: validatedInput.code.length,
-          language: validatedInput.context.language,
-          framework: validatedInput.context.framework,
-          relatedFiles: validatedInput.context.relatedFiles?.length || 0,
-          chatHistoryLength: validatedInput.chatHistory?.length || 0,
+        // Log the request
+        logger.info("Code critique requested", {
+          codeLength: params.code.length,
+          language: params.language,
+          framework: params.framework,
         });
 
-        // Perform analysis
-        const result = await deepSeekService.analyzeCode(validatedInput);
+        // Validate code length
+        if (params.code.length > config.maxCodeLength) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error: Code length exceeds maximum allowed length of ${config.maxCodeLength} characters`,
+              },
+            ],
+            isError: true,
+          };
+        }
 
-        // Log success
-        logger.info("Code criticism completed", {
-          executionTime: Date.now() - startTime,
-          overallScore: result.overall_score,
-          criticalIssues: result.critical_issues.length,
-          suggestions: result.suggestions.length,
-          alternatives: result.alternatives.length,
+        // Analyze code using DeepSeek service
+        const result = await deepSeekService.analyzeCode({
+          code: params.code,
+          context: {
+            language: params.language,
+            framework: params.framework,
+            userGoal:
+              params.userGoal ||
+              "Analyze code for issues and suggest improvements",
+            relatedFiles: [] as RelatedFile[],
+          },
+          chatHistory: [] as ChatHistoryEntry[],
         });
 
+        // Format the response
         return {
           content: [
             {
               type: "text",
-              text: formatResponse(result),
+              text: JSON.stringify(result, null, 2),
             },
           ],
         };
       } catch (error) {
-        logger.error("Code criticism failed", { error });
-        throw error;
+        logger.error("Code critique failed", { error });
+        return {
+          content: [
+            {
+              type: "text",
+              text:
+                error instanceof Error ? error.message : "Code critique failed",
+            },
+          ],
+          isError: true,
+        };
       }
     }
   );
