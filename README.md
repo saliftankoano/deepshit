@@ -1,36 +1,104 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DeepShit MCP Code Critic
+
+A brutally honest code review tool powered by DeepSeek-R1 AI and the Model Context Protocol (MCP).
+
+## Features
+
+- 🔍 Deep code analysis with DeepSeek-R1 AI
+- 🚀 Real-time feedback via MCP
+- 💀 Brutally honest code reviews
+- 🎯 Security, performance, and best practices checks
+- 🌐 Modern cyberpunk UI
+- ⚡ Built with Next.js and TypeScript
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- Together API key (for DeepSeek-R1)
+- Redis URL (for SSE transport)
+
+### Installation
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/yourusername/deepshit.git
+cd deepshit
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Create a `.env.local` file:
+
+```env
+TOGETHER_API_KEY=your_api_key_here
+TOGETHER_API_URL=https://api.together.xyz/v1
+DEEPSEEK_MODEL=deepseek-ai/deepseek-coder-33b-instruct
+REDIS_URL=your_redis_url_here
+```
+
+4. Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Using with Cursor
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Add this to your `~/.cursor/mcp.json`:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```json
+{
+  "mcpServers": {
+    "deepshit-mcp-code-critic": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://your-deployment.vercel.app/sse"],
+      "env": {
+        "NODE_ENV": "development",
+        "LOG_LEVEL": "info"
+      }
+    }
+  }
+}
+```
 
-## Learn More
+## Architecture
 
-To learn more about Next.js, take a look at the following resources:
+- `/app` - Next.js app router pages and API routes
+- `/lib/mcp` - MCP server implementation
+  - `/server.ts` - Main MCP server setup
+  - `/tools` - MCP tool implementations
+  - `/services` - External service integrations
+  - `/utils` - Shared utilities
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Development
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `npm run dev` - Start Next.js development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
+- `npm test` - Run tests
 
-## Deploy on Vercel
+## Contributing
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- [DeepSeek AI](https://deepseek.ai) for their amazing models
+- [Model Context Protocol](https://modelcontextprotocol.io) for the MCP specification
+- [Vercel](https://vercel.com) for their MCP adapter and hosting
