@@ -1,49 +1,73 @@
-import * as winston from "winston";
-
-const logLevel = process.env.LOG_LEVEL || "info";
-
-export const logger = winston.createLogger({
-  level: logLevel,
-  format: winston.format.combine(
-    winston.format.timestamp({
-      format: "YYYY-MM-DD HH:mm:ss",
-    }),
-    winston.format.errors({ stack: true }),
-    winston.format.json(),
-    winston.format.printf(({ level, message, timestamp, ...meta }) => {
-      const metaStr =
-        Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : "";
-      return `${timestamp} [${level.toUpperCase()}] ${message}${metaStr}`;
-    })
-  ),
-  transports: [
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      ),
-    }),
-  ],
-});
-
-// Add file transport in production
-if (process.env.NODE_ENV === "production") {
-  logger.add(
-    new winston.transports.File({
-      filename: "logs/error.log",
-      level: "error",
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-    })
-  );
-
-  logger.add(
-    new winston.transports.File({
-      filename: "logs/combined.log",
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-    })
-  );
+interface LoggerOptions {
+  level: "debug" | "info" | "warn" | "error";
+  prefix?: string;
 }
 
-export default logger;
+interface LogMeta {
+  [key: string]: unknown;
+}
+
+class Logger {
+  private level: string;
+  private prefix: string;
+  private levels = {
+    debug: 0,
+    info: 1,
+    warn: 2,
+    error: 3,
+  };
+
+  constructor(options: LoggerOptions = { level: "info" }) {
+    this.level = options.level;
+    this.prefix = options.prefix || "[DeepShit]";
+  }
+
+  private shouldLog(level: string): boolean {
+    return (
+      this.levels[level as keyof typeof this.levels] >=
+      this.levels[this.level as keyof typeof this.levels]
+    );
+  }
+
+  private formatMessage(
+    level: string,
+    message: string,
+    meta?: LogMeta
+  ): string {
+    const timestamp = new Date().toISOString();
+    const metaStr = meta ? ` ${JSON.stringify(meta)}` : "";
+    return `${
+      this.prefix
+    } ${timestamp} [${level.toUpperCase()}] ${message}${metaStr}`;
+  }
+
+  debug(message: string, meta?: LogMeta): void {
+    if (this.shouldLog("debug")) {
+      console.debug(this.formatMessage("debug", message, meta));
+    }
+  }
+
+  info(message: string, meta?: LogMeta): void {
+    if (this.shouldLog("info")) {
+      console.info(this.formatMessage("info", message, meta));
+    }
+  }
+
+  warn(message: string, meta?: LogMeta): void {
+    if (this.shouldLog("warn")) {
+      console.warn(this.formatMessage("warn", message, meta));
+    }
+  }
+
+  error(message: string, meta?: LogMeta): void {
+    if (this.shouldLog("error")) {
+      console.error(this.formatMessage("error", message, meta));
+    }
+  }
+}
+
+// Create a singleton instance with default options
+export const logger = new Logger({
+  level:
+    (process.env.LOG_LEVEL as "debug" | "info" | "warn" | "error") || "info",
+});
