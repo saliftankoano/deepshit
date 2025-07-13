@@ -56,21 +56,18 @@ const handler = createMcpHandler(
   }
 );
 
-interface RouteSegmentProps {
-  params: {
-    transport: string;
-  };
-}
-
 // Export the handler for both GET and POST requests
-export async function GET(request: NextRequest, { params }: RouteSegmentProps) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { transport: string } }
+) {
   logger.info("Handling GET request", { transport: params.transport });
   return handler(request);
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: RouteSegmentProps
+  { params }: { params: { transport: string } }
 ) {
   logger.info("Handling POST request", { transport: params.transport });
   return handler(request);
