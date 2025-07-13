@@ -2,8 +2,14 @@
 
 import { useState, useEffect } from "react";
 
+interface HealthStatus {
+  status: string;
+  timestamp?: string;
+  error?: string;
+}
+
 export default function Home() {
-  const [healthStatus, setHealthStatus] = useState<any>(null);
+  const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
   const [checking, setChecking] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [glitchText, setGlitchText] = useState("DeepShit");
@@ -19,7 +25,6 @@ export default function Home() {
       "ÐeepShit",
       "DeepShit",
     ];
-    let glitchIndex = 0;
 
     const glitchInterval = setInterval(() => {
       if (Math.random() > 0.85) {
@@ -40,7 +45,7 @@ export default function Home() {
       const response = await fetch("/api/critique");
       const data = await response.json();
       setHealthStatus(data);
-    } catch (err) {
+    } catch {
       setHealthStatus({ status: "error", error: "Health check failed" });
     } finally {
       setChecking(false);
