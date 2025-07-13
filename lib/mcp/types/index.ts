@@ -10,40 +10,82 @@ export type IssueSeverity = "critical" | "high" | "medium" | "low";
 export type SupportedLanguage = "typescript" | "javascript";
 
 // Input schemas
-export const CodeCriticInputSchema = z.object({
-  code: z.string().min(10, "Code cannot be empty"),
-  context: z.object({
-    userGoal: z.string().min(10, "User goal is required"),
-    relatedFiles: z
-      .array(
-        z.object({
-          path: z.string(),
-          content: z.string(),
-          relevance: z.string(),
-        })
-      )
-      .optional()
-      .default([]),
-    language: z.enum(["typescript", "javascript"]),
-    framework: z.string().optional(),
-  }),
-  chatHistory: z
+export const CodeContextSchema = z.object({
+  language: z.string().min(1),
+  framework: z.string().optional(),
+  userGoal: z.string().min(1),
+  relatedFiles: z
     .array(
       z.object({
-        message: z.string(),
-        timestamp: z.string(),
+        path: z.string(),
+        content: z.string(),
+        relevance: z.string(),
       })
     )
-    .optional()
-    .default([]),
+    .optional(),
 });
 
-export type CodeCriticInput = z.infer<typeof CodeCriticInputSchema>;
+export const ChatHistoryEntrySchema = z.object({
+  message: z.string(),
+  timestamp: z.string().optional(),
+});
 
-// Analysis result types
-export interface Issue {
-  type: IssueType;
-  severity: IssueSeverity;
+export const CodeCriticInputSchema = z.object({
+  code: z.string().min(1),
+  context: CodeContextSchema,
+  chatHistory: z.array(ChatHistoryEntrySchema).optional(),
+});
+
+export interface DeepSeekRequest {
+  model: string;
+  messages: Array<{
+    role: "system" | "user" | "assistant";
+    content: string;
+  }>;
+  max_tokens: number;
+  temperature: number;
+  top_p: number;
+  stream: boolean;
+}
+
+export interface DeepSeekResponse {
+  choices: Array<{
+    message: {
+      content: string;
+      role: string;
+    };
+    finish_reason: string;
+    index: number;
+  }>;
+}
+
+export interface RelatedFile {
+  path: string;
+  content: string;
+  relevance: string;
+}
+
+export interface ChatHistoryEntry {
+  message: string;
+  timestamp?: string;
+}
+
+export interface CodeContext {
+  language: string;
+  framework?: string;
+  userGoal: string;
+  relatedFiles?: RelatedFile[];
+}
+
+export interface CodeCriticInput {
+  code: string;
+  context: CodeContext;
+  chatHistory?: ChatHistoryEntry[];
+}
+
+export interface CriticalIssue {
+  type: "security" | "performance" | "maintainability" | "readability";
+  severity: "critical" | "high" | "medium" | "low";
   line_range: [number, number];
   description: string;
   explanation: string;
@@ -51,7 +93,7 @@ export interface Issue {
 }
 
 export interface Suggestion {
-  type: IssueType;
+  type: "security" | "performance" | "maintainability" | "readability";
   description: string;
   line_range: [number, number];
   impact: string;
@@ -70,46 +112,19 @@ export interface ContextAlignment {
   recommendations: string[];
 }
 
+export interface AnalysisMetadata {
+  analysis_time_ms: number;
+  model_used: string;
+  timestamp: string;
+}
+
 export interface CriticismResponse {
   overall_score: number;
-  critical_issues: Issue[];
+  critical_issues: CriticalIssue[];
   suggestions: Suggestion[];
   alternatives: Alternative[];
   context_alignment: ContextAlignment;
-  analysis_metadata: {
-    analysis_time_ms: number;
-    model_used: string;
-    timestamp: string;
-  };
-}
-
-// DeepSeek API types
-export interface DeepSeekRequest {
-  model: string;
-  messages: Array<{
-    role: "system" | "user" | "assistant";
-    content: string;
-  }>;
-  max_tokens?: number;
-  temperature?: number;
-  top_p?: number;
-  stream?: boolean;
-}
-
-export interface DeepSeekResponse {
-  choices: Array<{
-    message: {
-      role: string;
-      content: string;
-    };
-    finish_reason: string;
-  }>;
-  usage: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
-  model: string;
+  analysis_metadata: AnalysisMetadata;
 }
 
 // Configuration types
@@ -138,15 +153,17 @@ export class CodeCriticError extends Error {
   }
 }
 
-export class ValidationError extends CodeCriticError {
+export class ValidationError extends Error {
   constructor(message: string) {
-    super(message, "VALIDATION_ERROR", 400);
+    super(message);
+    this.name = "ValidationError";
   }
 }
 
-export class APIError extends CodeCriticError {
-  constructor(message: string, statusCode: number = 500) {
-    super(message, "API_ERROR", statusCode);
+export class APIError extends Error {
+  constructor(message: string, public status: number = 500) {
+    super(message);
+    this.name = "APIError";
   }
 }
 
