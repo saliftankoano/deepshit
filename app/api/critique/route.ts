@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { healthCheck } from "@/lib/mcp/server";
 import { DeepSeekService } from "@/lib/mcp/services/deepseek";
 import { z } from "zod";
 import { logger } from "@/lib/mcp/utils/logger";
