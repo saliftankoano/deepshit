@@ -2,7 +2,7 @@ import { createMcpHandler } from "@vercel/mcp-adapter";
 import { server } from "@/lib/mcp/server";
 import { logger } from "@/lib/mcp/utils/logger";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 
 // Create the MCP route handler
 const handler = createMcpHandler(
@@ -57,18 +57,5 @@ const handler = createMcpHandler(
 );
 
 // Export the handler for both GET and POST requests
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { transport: string } }
-) {
-  logger.info("Handling GET request", { transport: params.transport });
-  return handler(request);
-}
-
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { transport: string } }
-) {
-  logger.info("Handling POST request", { transport: params.transport });
-  return handler(request);
-}
+export const GET = handler;
+export const POST = handler;
