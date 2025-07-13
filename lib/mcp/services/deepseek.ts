@@ -5,8 +5,11 @@ import {
   APIError,
   CodeCriticInput,
   CriticismResponse,
-} from "../types/index.js";
-import { logger } from "../utils/logger.js";
+  CriticalIssue,
+  Suggestion,
+  Alternative,
+} from "../types";
+import { logger } from "../utils/logger";
 
 export class DeepSeekService {
   private apiKey: string;
@@ -28,6 +31,7 @@ export class DeepSeekService {
 
   private createSystemPrompt(): string {
     return `You are DeepShit, an expert code critic and analyzer. Your role is to provide comprehensive, context-aware feedback on code quality, security, and best practices.
+Be brutally honest and unapologetic.
 
 ANALYSIS AREAS:
 1. SECURITY: Identify vulnerabilities, potential attack vectors, and security anti-patterns
@@ -181,7 +185,7 @@ LANGUAGE: ${context.language}`;
         });
 
         // Fallback: Create a basic response if parsing fails
-        analysis = this.createFallbackResponse(input, content);
+        analysis = this.createFallbackResponse();
       }
 
       // Add metadata
@@ -214,30 +218,66 @@ LANGUAGE: ${context.language}`;
     }
   }
 
-  private validateAndNormalizeResponse(response: any): CriticismResponse {
+  private validateAndNormalizeResponse(response: unknown): CriticismResponse {
     // Validate required fields and provide defaults
     const analysis: CriticismResponse = {
-      overall_score: Math.min(10, Math.max(1, response.overall_score || 5)),
-      critical_issues: Array.isArray(response.critical_issues)
-        ? response.critical_issues
+      overall_score: Math.min(
+        10,
+        Math.max(
+          1,
+          ((response as Record<string, unknown>).overall_score as number) || 5
+        )
+      ),
+      critical_issues: Array.isArray(
+        (response as Record<string, unknown>).critical_issues
+      )
+        ? ((response as Record<string, unknown>)
+            .critical_issues as CriticalIssue[])
         : [],
-      suggestions: Array.isArray(response.suggestions)
-        ? response.suggestions
+      suggestions: Array.isArray(
+        (response as Record<string, unknown>).suggestions
+      )
+        ? ((response as Record<string, unknown>).suggestions as Suggestion[])
         : [],
-      alternatives: Array.isArray(response.alternatives)
-        ? response.alternatives
+      alternatives: Array.isArray(
+        (response as Record<string, unknown>).alternatives
+      )
+        ? ((response as Record<string, unknown>).alternatives as Alternative[])
         : [],
       context_alignment: {
         alignment_score: Math.min(
           10,
-          Math.max(1, response.context_alignment?.alignment_score || 5)
+          Math.max(
+            1,
+            ((
+              (response as Record<string, unknown>).context_alignment as Record<
+                string,
+                unknown
+              >
+            )?.alignment_score as number) || 5
+          )
         ),
         goal_analysis:
-          response.context_alignment?.goal_analysis || "Analysis not available",
+          ((
+            (response as Record<string, unknown>).context_alignment as Record<
+              string,
+              unknown
+            >
+          )?.goal_analysis as string) || "Analysis not available",
         recommendations: Array.isArray(
-          response.context_alignment?.recommendations
+          (
+            (response as Record<string, unknown>).context_alignment as Record<
+              string,
+              unknown
+            >
+          )?.recommendations
         )
-          ? response.context_alignment.recommendations
+          ? ((
+              (response as Record<string, unknown>).context_alignment as Record<
+                string,
+                unknown
+              >
+            ).recommendations as string[])
           : [],
       },
       analysis_metadata: {
@@ -247,55 +287,28 @@ LANGUAGE: ${context.language}`;
       },
     };
 
-    // Normalize issues
-    analysis.critical_issues = analysis.critical_issues.map((issue) => ({
-      type: [
-        "security",
-        "performance",
-        "maintainability",
-        "readability",
-      ].includes(issue.type)
-        ? issue.type
-        : "readability",
-      severity: ["critical", "high", "medium", "low"].includes(issue.severity)
-        ? issue.severity
-        : "medium",
-      line_range:
-        Array.isArray(issue.line_range) && issue.line_range.length === 2
-          ? issue.line_range
-          : [1, 1],
-      description: issue.description || "Issue detected",
-      explanation: issue.explanation || "No explanation provided",
-      fix_suggestion: issue.fix_suggestion || "No suggestion provided",
-    }));
-
     return analysis;
   }
 
-  private createFallbackResponse(
-    input: CodeCriticInput,
-    content: string
-  ): CriticismResponse {
+  private createFallbackResponse(): CriticismResponse {
     return {
       overall_score: 5,
       critical_issues: [
         {
           type: "readability",
           severity: "medium",
-          line_range: [1, input.code.split("\n").length],
-          description: "Analysis parsing failed",
-          explanation:
-            "The AI response could not be parsed properly. Please try again.",
-          fix_suggestion:
-            "Re-run the analysis or check the code for syntax errors.",
+          line_range: [1, 1],
+          description: "Failed to analyze code",
+          explanation: "The AI model failed to analyze the code properly",
+          fix_suggestion: "Please try again or check the code format",
         },
       ],
       suggestions: [],
       alternatives: [],
       context_alignment: {
         alignment_score: 5,
-        goal_analysis: "Could not analyze goal alignment due to parsing error",
-        recommendations: ["Re-run the analysis", "Check code syntax"],
+        goal_analysis: "Analysis failed",
+        recommendations: ["Try again with a smaller code sample"],
       },
       analysis_metadata: {
         analysis_time_ms: 0,
