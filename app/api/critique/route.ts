@@ -1,9 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { healthCheck } from "@/lib/mcp/server";
 import { DeepSeekService } from "@/lib/mcp/services/deepseek";
-import { CodeCriticInputSchema, ValidationError } from "@/lib/mcp/types";
+import { z } from "zod";
 import { logger } from "@/lib/mcp/utils/logger";
 import { config } from "@/lib/mcp/utils/config";
+
+// Create validation schema
+const CodeCriticInputSchema = z.object({
+  code: z.string().min(1, "Code cannot be empty"),
+  context: z.object({
+    language: z.string().min(1, "Language is required"),
+    framework: z.string().optional(),
+    userGoal: z.string().min(10, "User goal is required"),
+    relatedFiles: z
+      .array(
+        z.object({
+          path: z.string(),
+          content: z.string(),
+          relevance: z.string(),
+        })
+      )
+      .optional(),
+  }),
+  chatHistory: z
+    .array(
+      z.object({
+        message: z.string(),
+        timestamp: z.string().optional(),
+      })
+    )
+    .optional(),
+});
 
 // Create DeepSeek service instance
 const deepSeekService = new DeepSeekService(
@@ -34,8 +61,12 @@ export async function POST(request: NextRequest) {
 
       // Additional validation
       if (validatedInput.code.length > config.maxCodeLength) {
-        throw new ValidationError(
-          `Code length exceeds maximum allowed length of ${config.maxCodeLength} characters`
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Code length exceeds maximum allowed length of ${config.maxCodeLength} characters`,
+          },
+          { status: 400 }
         );
       }
 
