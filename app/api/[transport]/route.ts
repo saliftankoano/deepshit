@@ -59,16 +59,16 @@ const handler = createMcpHandler(
 // Export the handler for both GET and POST requests
 export async function GET(
   request: NextRequest,
-  { params }: { params: { transport: string } }
+  context: { params: { transport: string } }
 ) {
-  logger.info("Handling GET request", { transport: params.transport });
+  logger.info("Handling GET request", { transport: context.params.transport });
   return handler(request);
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { transport: string } }
+  context: { params: { transport: string } }
 ) {
-  logger.info("Handling POST request", { transport: params.transport });
+  logger.info("Handling POST request", { transport: context.params.transport });
   return handler(request);
 }
