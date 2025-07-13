@@ -1,7 +1,6 @@
 import { createMcpHandler } from "@vercel/mcp-adapter";
 import { server } from "@/lib/mcp/server";
 import { logger } from "@/lib/mcp/utils/logger";
-import { config } from "@/lib/mcp/utils/config";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 // Create the MCP route handler
