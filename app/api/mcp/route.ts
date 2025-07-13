@@ -24,6 +24,7 @@ const handler = createMcpHandler(
     maxDuration: 800, // For Vercel Pro/Enterprise accounts
     verboseLogs: process.env.NODE_ENV === "development",
     redisUrl: process.env.REDIS_URL,
+    basePath: "/api",
     onEvent: (event) => {
       switch (event.type) {
         case "ERROR":
