@@ -8,8 +8,19 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "Access-Control-Allow-Credentials", value: "true" },
           { key: "Access-Control-Allow-Origin", value: "*" },
-          { key: "Access-Control-Allow-Methods", value: "GET,POST,OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Content-Type" },
+          {
+            key: "Access-Control-Allow-Methods",
+            value: "GET,POST,DELETE,OPTIONS",
+          },
+          {
+            key: "Access-Control-Allow-Headers",
+            value:
+              "Content-Type, Accept, Authorization, x-api-key, Mcp-Session-Id, Last-Event-ID",
+          },
+          {
+            key: "Access-Control-Expose-Headers",
+            value: "Content-Type, Authorization, x-api-key, Mcp-Session-Id",
+          },
           { key: "Cache-Control", value: "no-cache, no-transform" },
           { key: "Connection", value: "keep-alive" },
         ],
