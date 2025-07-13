@@ -2,15 +2,14 @@ import { createMcpHandler } from "@vercel/mcp-adapter";
 import { server } from "@/lib/mcp/server";
 import { logger } from "@/lib/mcp/utils/logger";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerCritiqueCodeTool } from "@/lib/mcp/tools/critique-code";
 
 // Create the MCP route handler
 const handler = createMcpHandler(
   // Initialize server function
   async (mcpServer: McpServer) => {
-    // Copy tools from our server instance to the MCP server
-    mcpServer.tool = server.tool;
-    mcpServer.prompt = server.prompt;
-    mcpServer.resource = server.resource;
+    // Register tools on the new server instance
+    registerCritiqueCodeTool(mcpServer);
   },
   // Server options
   {

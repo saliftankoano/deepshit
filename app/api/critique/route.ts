@@ -111,25 +111,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-  try {
-    const isHealthy = await healthCheck();
-
-    return NextResponse.json({
-      status: isHealthy ? "healthy" : "unhealthy",
-      timestamp: new Date().toISOString(),
-      service: "DeepShit MCP Code Critic",
-      version: "1.0.0",
-      api: "critique",
-      mcp: "Available at /api/mcp endpoint",
-    });
-  } catch (error) {
-    logger.error("Health check error", { error });
-    return NextResponse.json(
-      {
-        status: "error",
-        error: error instanceof Error ? error.message : "Health check failed",
-      },
-      { status: 500 }
-    );
-  }
+  return NextResponse.json({
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+  });
 }
