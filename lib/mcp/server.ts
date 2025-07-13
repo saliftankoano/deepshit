@@ -2,7 +2,6 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { registerCritiqueCodeTool } from "./tools/critique-code";
 import { logger } from "./utils/logger";
-import { config } from "./utils/config";
 
 // Create the MCP server
 export const server = new McpServer({
@@ -14,6 +13,26 @@ export const server = new McpServer({
 
 // Register the critique code tool
 registerCritiqueCodeTool(server);
+
+// Function to check server health
+export async function healthCheck(): Promise<boolean> {
+  try {
+    // Check if server is initialized
+    if (!server) {
+      return false;
+    }
+
+    // Check if server is connected
+    if (!server.isConnected()) {
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    logger.error("Health check failed", { error });
+    return false;
+  }
+}
 
 // Function to start the server with stdio transport
 export async function startServer() {
